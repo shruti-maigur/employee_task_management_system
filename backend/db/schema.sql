@@ -1,4 +1,4 @@
--- Create Database
+ -- Create Database
 CREATE DATABASE IF NOT EXISTS employee_task_db;
 USE employee_task_db;
 
