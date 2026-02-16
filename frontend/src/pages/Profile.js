@@ -18,10 +18,8 @@ const Profile = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/profile', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const { default: api } = await import('../services/api');
+      const { data } = await api.get('/auth/profile');
       setProfile(data.user);
       setFormData(data.user);
     } catch (error) {
@@ -30,30 +28,18 @@ const Profile = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/auth/profile', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        setMessage('Profile updated successfully');
-        setIsEditing(false);
-        fetchProfile();
-        setTimeout(() => setMessage(''), 3000);
-      }
+      const { default: api } = await import('../services/api');
+      await api.put('/auth/profile', { first_name: formData.first_name, last_name: formData.last_name });
+      setMessage('Profile updated successfully');
+      setIsEditing(false);
+      fetchProfile();
+      setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       setMessage('Error updating profile');
     }
@@ -72,20 +58,16 @@ const Profile = () => {
             {!isEditing ? (
               <div className="profile-view">
                 <div className="profile-field">
-                  <label>Name:</label>
-                  <p>{profile?.first_name} {profile?.last_name}</p>
+                  <label>First Name:</label>
+                  <p>{profile?.first_name}</p>
+                </div>
+                <div className="profile-field">
+                  <label>Last Name:</label>
+                  <p>{profile?.last_name}</p>
                 </div>
                 <div className="profile-field">
                   <label>Email:</label>
                   <p>{profile?.email}</p>
-                </div>
-                <div className="profile-field">
-                  <label>Phone:</label>
-                  <p>{profile?.phone || 'Not provided'}</p>
-                </div>
-                <div className="profile-field">
-                  <label>Department:</label>
-                  <p>{profile?.department || 'Not provided'}</p>
                 </div>
                 <div className="profile-field">
                   <label>Role:</label>
@@ -102,7 +84,7 @@ const Profile = () => {
                   <input
                     type="text"
                     name="first_name"
-                    value={formData.first_name}
+                    value={formData.first_name || ''}
                     onChange={handleChange}
                   />
                 </div>
@@ -111,7 +93,7 @@ const Profile = () => {
                   <input
                     type="text"
                     name="last_name"
-                    value={formData.last_name}
+                    value={formData.last_name || ''}
                     onChange={handleChange}
                   />
                 </div>
@@ -125,40 +107,12 @@ const Profile = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Phone:</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone || ''}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Department:</label>
-                  <input
-                    type="text"
-                    name="department"
-                    value={formData.department || ''}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group">
                   <label>Role:</label>
-                  <input
-                    type="text"
-                    value={formData.role}
-                    disabled
-                  />
+                  <input type="text" value={formData.role} disabled />
                 </div>
                 <div className="button-group">
                   <button type="submit" className="btn-primary">Save Changes</button>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditing(false)}
-                  >
-                    Cancel
-                  </button>
+                  <button type="button" className="btn-secondary" onClick={() => setIsEditing(false)}>Cancel</button>
                 </div>
               </form>
             )}

@@ -16,11 +16,9 @@ const Employees = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/employees/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setEmployees(data.employees || []);
+      const { default: api } = await import('../services/api');
+      const { data } = await api.get('/users');
+      setEmployees(data.users || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
     } finally {
@@ -58,14 +56,10 @@ const Employees = () => {
                     <tr key={emp.id}>
                       <td>{emp.first_name} {emp.last_name}</td>
                       <td>{emp.email}</td>
-                      <td>{emp.phone || '-'}</td>
-                      <td>{emp.department || '-'}</td>
+                      <td>-</td>
+                      <td>-</td>
                       <td>{emp.role}</td>
-                      <td>
-                        <span className={`status ${emp.is_active ? 'active' : 'inactive'}`}>
-                          {emp.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
+                      <td>-</td>
                     </tr>
                   ))}
                 </tbody>

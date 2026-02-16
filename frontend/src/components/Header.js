@@ -1,34 +1,26 @@
-import React, { useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+// ============================================================
+// Header Component
+// File: frontend/src/components/Header.js
+// ============================================================
+
+import React from 'react';
 import '../styles/Header.css';
 
 const Header = () => {
-  const { user, logout } = useContext(AuthContext);
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   return (
-    <header className="header">
-      <div className="header-content">
-        <div className="logo">
-          <h1>Task Management</h1>
-        </div>
-        <div className="header-right">
-          {user && (
-            <>
-              <span className="user-info">
-                Welcome, {user.first_name} ({user.role})
-              </span>
-              <button className="logout-btn" onClick={handleLogout}>
-                Logout
-              </button>
-            </>
-          )}
+    <header className="header bg-dark text-white py-3">
+      <div className="container-fluid">
+        <div className="d-flex justify-content-between align-items-center">
+          <div className="logo">
+            <h1 className="mb-0">
+              <i className="fas fa-tasks me-2"></i>Task Manager
+            </h1>
+          </div>
+          <div className="header-right">
+            <p className="text-muted mb-0">
+              <small>Version 1.0</small>
+            </p>
+          </div>
         </div>
       </div>
     </header>
