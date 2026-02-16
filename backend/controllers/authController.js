@@ -1,24 +1,22 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const { ROLES } = require('../config/constants');
 
-// Register
+// Register (self-registration -> Employee by default)
 const register = async (req, res) => {
   try {
-    const { first_name, last_name, email, password, phone, department } = req.body;
+    const { first_name, last_name, email, password } = req.body;
 
     // Validate input
     if (!first_name || !last_name || !email || !password) {
-      return res.status(400).json({ message: 'Please provide all required fields' });
+      return res.status(400).json({ message: 'Please provide first_name, last_name, email and password' });
     }
 
     const conn = await pool.getConnection();
-    
+
     // Check if user already exists
-    const [existingUser] = await conn.query(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    );
+    const [existingUser] = await conn.query('SELECT id FROM users WHERE email = ?', [email]);
 
     if (existingUser.length > 0) {
       conn.release();
@@ -28,18 +26,15 @@ const register = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user as Employee (Admin should use /api/users to create other roles)
     const [result] = await conn.query(
-      'INSERT INTO users (first_name, last_name, email, password, phone, department, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [first_name, last_name, email, hashedPassword, phone, department, 'employee']
+      'INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)',
+      [first_name, last_name, email, hashedPassword, ROLES.EMPLOYEE]
     );
 
     conn.release();
 
-    res.status(201).json({
-      message: 'User registered successfully',
-      userId: result.insertId
-    });
+    res.status(201).json({ message: 'User registered successfully', userId: result.insertId });
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -56,12 +51,7 @@ const login = async (req, res) => {
     }
 
     const conn = await pool.getConnection();
-    
-    const [users] = await conn.query(
-      'SELECT id, first_name, last_name, email, password, role, is_active FROM users WHERE email = ?',
-      [email]
-    );
-
+    const [users] = await conn.query('SELECT id, first_name, last_name, email, password, role, created_at FROM users WHERE email = ?', [email]);
     conn.release();
 
     if (users.length === 0) {
@@ -69,10 +59,6 @@ const login = async (req, res) => {
     }
 
     const user = users[0];
-
-    if (!user.is_active) {
-      return res.status(401).json({ message: 'User account is inactive' });
-    }
 
     // Compare password
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -82,23 +68,9 @@ const login = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE }
-    );
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
 
-    res.status(200).json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        role: user.role
-      }
-    });
+    res.status(200).json({ message: 'Login successful', token, user: { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email, role: user.role } });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -110,21 +82,11 @@ const getUserProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     const conn = await pool.getConnection();
-    
-    const [users] = await conn.query(
-      'SELECT id, first_name, last_name, email, phone, role, department, profile_image, created_at FROM users WHERE id = ?',
-      [userId]
-    );
-
+    const [users] = await conn.query('SELECT id, first_name, last_name, email, role, created_at FROM users WHERE id = ?', [userId]);
     conn.release();
 
-    if (users.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.status(200).json({
-      user: users[0]
-    });
+    if (users.length === 0) return res.status(404).json({ message: 'User not found' });
+    return res.status(200).json({ user: users[0] });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -135,20 +97,11 @@ const getUserProfile = async (req, res) => {
 const updateUserProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { first_name, last_name, phone, department } = req.body;
-
+    const { first_name, last_name } = req.body;
     const conn = await pool.getConnection();
-    
-    await conn.query(
-      'UPDATE users SET first_name = ?, last_name = ?, phone = ?, department = ? WHERE id = ?',
-      [first_name, last_name, phone, department, userId]
-    );
-
+    await conn.query('UPDATE users SET first_name = ?, last_name = ? WHERE id = ?', [first_name, last_name, userId]);
     conn.release();
-
-    res.status(200).json({
-      message: 'Profile updated successfully'
-    });
+    return res.status(200).json({ message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -160,16 +113,10 @@ const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ message: 'Please provide email' });
-    }
+    if (!email) return res.status(400).json({ message: 'Please provide email' });
 
     const conn = await pool.getConnection();
-    
-    const [users] = await conn.query(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    );
+    const [users] = await conn.query('SELECT id FROM users WHERE email = ?', [email]);
 
     if (users.length === 0) {
       conn.release();
@@ -177,31 +124,18 @@ const forgotPassword = async (req, res) => {
     }
 
     const userId = users[0].id;
-    const resetToken = jwt.sign(
-      { userId },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
+    const resetToken = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     // Save reset token to database
-    const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
-    
-    await conn.query(
-      'INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)',
-      [userId, resetToken, expiresAt]
-    );
-
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+    await conn.query('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)', [userId, resetToken, expiresAt]);
     conn.release();
 
-    // In production, send email with reset link
-    // For now, we'll return the token for testing
-    res.status(200).json({
-      message: 'Password reset token sent to email',
-      token: resetToken // Remove this in production
-    });
+    // In production, send email. Returning token for testing only.
+    return res.status(200).json({ message: 'Password reset token created', token: resetToken });
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -210,9 +144,7 @@ const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
-    if (!token || !newPassword) {
-      return res.status(400).json({ message: 'Please provide token and new password' });
-    }
+    if (!token || !newPassword) return res.status(400).json({ message: 'Please provide token and new password' });
 
     // Verify token
     let decoded;
@@ -223,49 +155,23 @@ const resetPassword = async (req, res) => {
     }
 
     const conn = await pool.getConnection();
-    
-    // Check if token exists and is valid
-    const [resetTokens] = await conn.query(
-      'SELECT id FROM password_resets WHERE token = ? AND expires_at > NOW() AND is_used = FALSE',
-      [token]
-    );
+    const [resetTokens] = await conn.query('SELECT id FROM password_resets WHERE token = ? AND expires_at > NOW() AND is_used = FALSE', [token]);
 
     if (resetTokens.length === 0) {
       conn.release();
       return res.status(400).json({ message: 'Invalid or expired token' });
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password
-    await conn.query(
-      'UPDATE users SET password = ? WHERE id = ?',
-      [hashedPassword, decoded.userId]
-    );
-
-    // Mark token as used
-    await conn.query(
-      'UPDATE password_resets SET is_used = TRUE WHERE token = ?',
-      [token]
-    );
-
+    await conn.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, decoded.userId]);
+    await conn.query('UPDATE password_resets SET is_used = TRUE WHERE token = ?', [token]);
     conn.release();
 
-    res.status(200).json({
-      message: 'Password reset successfully'
-    });
+    return res.status(200).json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('Reset password error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-module.exports = {
-  register,
-  login,
-  getUserProfile,
-  updateUserProfile,
-  forgotPassword,
-  resetPassword
-};
+module.exports = { register, login, getUserProfile, updateUserProfile, forgotPassword, resetPassword };

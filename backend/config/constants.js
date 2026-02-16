@@ -1,20 +1,20 @@
+// Standardized values (match system requirements)
 const ROLES = {
-  ADMIN: 'admin',
-  EMPLOYEE: 'employee'
+  ADMIN: 'Admin',
+  MANAGER: 'Manager',
+  EMPLOYEE: 'Employee'
 };
 
 const TASK_STATUS = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled'
+  PENDING: 'Pending',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed'
 };
 
 const TASK_PRIORITY = {
-  LOW: 'low',
-  MEDIUM: 'medium',
-  HIGH: 'high',
-  URGENT: 'urgent'
+  HIGH: 'High',
+  MEDIUM: 'Medium',
+  LOW: 'Low'
 };
 
 module.exports = {
