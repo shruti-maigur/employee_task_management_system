@@ -9,12 +9,17 @@ const Sidebar = () => {
   return (
     <aside className="sidebar">
       <nav className="nav-menu">
-        {user?.role === 'admin' ? (
+        {user?.role === 'Admin' ? (
           <>
             <Link to="/dashboard" className="nav-link">Dashboard</Link>
             <Link to="/tasks" className="nav-link">All Tasks</Link>
-            <Link to="/employees" className="nav-link">Employees</Link>
-            <Link to="/reports" className="nav-link">Reports</Link>
+            <Link to="/users" className="nav-link">User Management</Link>
+            <Link to="/profile" className="nav-link">Profile</Link>
+          </>
+        ) : user?.role === 'Manager' ? (
+          <>
+            <Link to="/dashboard" className="nav-link">Dashboard</Link>
+            <Link to="/tasks" className="nav-link">Team Tasks</Link>
             <Link to="/profile" className="nav-link">Profile</Link>
           </>
         ) : (

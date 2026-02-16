@@ -1,9 +1,10 @@
 const jwt = require('jsonwebtoken');
+const { ROLES } = require('../config/constants');
 
 const authMiddleware = (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    
+
     if (!token) {
       return res.status(401).json({ message: 'No token provided' });
     }
@@ -17,15 +18,23 @@ const authMiddleware = (req, res, next) => {
 };
 
 const adminMiddleware = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && req.user.role === ROLES.ADMIN) {
     next();
   } else {
     res.status(403).json({ message: 'Admin access required' });
   }
 };
 
+const managerMiddleware = (req, res, next) => {
+  if (req.user && req.user.role === ROLES.MANAGER) {
+    next();
+  } else {
+    res.status(403).json({ message: 'Manager access required' });
+  }
+};
+
 const employeeMiddleware = (req, res, next) => {
-  if (req.user && (req.user.role === 'employee' || req.user.role === 'admin')) {
+  if (req.user && (req.user.role === ROLES.EMPLOYEE || req.user.role === ROLES.ADMIN || req.user.role === ROLES.MANAGER)) {
     next();
   } else {
     res.status(403).json({ message: 'Employee access required' });
@@ -35,5 +44,6 @@ const employeeMiddleware = (req, res, next) => {
 module.exports = {
   authMiddleware,
   adminMiddleware,
+  managerMiddleware,
   employeeMiddleware
 };

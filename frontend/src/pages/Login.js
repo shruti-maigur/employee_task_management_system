@@ -17,22 +17,12 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        login(data.token, data.user);
-        navigate('/dashboard');
-      } else {
-        setError(data.message || 'Login failed');
-      }
+      const { default: api } = await import('../services/api');
+      const { data } = await api.post('/auth/login', { email, password });
+      login(data.token, data.user);
+      navigate('/dashboard');
     } catch (err) {
-      setError('Server error. Please try again.');
+      setError(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }

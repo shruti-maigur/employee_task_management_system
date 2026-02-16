@@ -5,16 +5,14 @@ import { AuthContext } from './AuthContext';
 const ProtectedRoute = ({ children, requiredRole = null }) => {
   const { isAuthenticated, user, loading } = useContext(AuthContext);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  if (loading) return <div>Loading...</div>;
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
+  if (!isAuthenticated) return <Navigate to="/login" />;
 
-  if (requiredRole && user?.role !== requiredRole) {
-    return <Navigate to="/unauthorized" />;
+  if (requiredRole) {
+    // allow requiredRole to be string or array
+    const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!roles.includes(user?.role)) return <Navigate to="/unauthorized" />;
   }
 
   return children;

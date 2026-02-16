@@ -1,37 +1,29 @@
- -- Create Database
+-- Create Database
 CREATE DATABASE IF NOT EXISTS employee_task_db;
 USE employee_task_db;
 
--- Users Table
+-- Users Table (matches system requirements)
 CREATE TABLE users (
   id INT PRIMARY KEY AUTO_INCREMENT,
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
-  phone VARCHAR(15),
-  role ENUM('admin', 'employee') DEFAULT 'employee',
-  department VARCHAR(100),
-  profile_image VARCHAR(255),
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  role ENUM('Admin','Manager','Employee') DEFAULT 'Employee',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tasks Table
+-- Tasks Table (matches system requirements)
 CREATE TABLE tasks (
   id INT PRIMARY KEY AUTO_INCREMENT,
   title VARCHAR(255) NOT NULL,
-  description LONGTEXT,
-  priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
-  status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
+  description TEXT,
+  deadline DATE,
+  priority ENUM('High','Medium','Low') DEFAULT 'Medium',
+  status ENUM('Pending','In Progress','Completed') DEFAULT 'Pending',
   assigned_to INT,
   created_by INT NOT NULL,
-  deadline DATE,
-  completed_at TIMESTAMP NULL,
-  progress INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -47,19 +39,7 @@ CREATE TABLE task_comments (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Task Attachments Table
-CREATE TABLE task_attachments (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  task_id INT NOT NULL,
-  file_name VARCHAR(255) NOT NULL,
-  file_path VARCHAR(255) NOT NULL,
-  uploaded_by INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
-  FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Password Reset Table (for Forgot Password feature)
+-- Password Reset Table
 CREATE TABLE password_resets (
   id INT PRIMARY KEY AUTO_INCREMENT,
   user_id INT NOT NULL,
@@ -70,7 +50,7 @@ CREATE TABLE password_resets (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Create Indexes for better performance
+-- Indexes
 CREATE INDEX idx_email ON users(email);
 CREATE INDEX idx_role ON users(role);
 CREATE INDEX idx_task_assigned_to ON tasks(assigned_to);

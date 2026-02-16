@@ -13,7 +13,7 @@ const TaskList = () => {
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
-    priority: 'medium',
+    priority: 'Medium',
     deadline: '',
     assigned_to: ''
   });
@@ -21,21 +21,16 @@ const TaskList = () => {
 
   useEffect(() => {
     fetchTasks();
-    if (user?.role === 'admin') {
+    if (user?.role === 'Admin') {
       fetchEmployees();
     }
   }, [token]);
 
   const fetchTasks = async () => {
     try {
-      const url = user?.role === 'admin' 
-        ? 'http://localhost:5000/api/tasks/'
-        : 'http://localhost:5000/api/tasks/my-tasks';
-      
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const { default: api } = await import('../services/api');
+      const url = user?.role === 'Admin' || user?.role === 'Manager' ? '/tasks' : '/tasks/my-tasks';
+      const { data } = await api.get(url);
       setTasks(data.tasks || []);
     } catch (error) {
       console.error('Error fetching tasks:', error);
@@ -46,11 +41,9 @@ const TaskList = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/employees/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setEmployees(data.employees || []);
+      const { default: api } = await import('../services/api');
+      const { data } = await api.get('/users');
+      setEmployees(data.users || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
     }
@@ -59,20 +52,18 @@ const TaskList = () => {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/tasks/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newTask)
-      });
-
-      if (response.ok) {
-        setNewTask({ title: '', description: '', priority: 'medium', deadline: '', assigned_to: '' });
-        setShowForm(false);
-        fetchTasks();
-      }
+      const { default: api } = await import('../services/api');
+      const payload = {
+        title: newTask.title,
+        description: newTask.description,
+        priority: newTask.priority,
+        deadline: newTask.deadline || null,
+        assigned_to: newTask.assigned_to || null
+      };
+      const { data } = await api.post('/tasks', payload);
+      setNewTask({ title: '', description: '', priority: 'Medium', deadline: '', assigned_to: '' });
+      setShowForm(false);
+      fetchTasks();
     } catch (error) {
       console.error('Error creating task:', error);
     }
@@ -80,18 +71,9 @@ const TaskList = () => {
 
   const handleUpdateStatus = async (taskId, newStatus) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (response.ok) {
-        fetchTasks();
-      }
+      const { default: api } = await import('../services/api');
+      const { data } = await api.put(`/tasks/${taskId}`, { status: newStatus });
+      fetchTasks();
     } catch (error) {
       console.error('Error updating task:', error);
     }
@@ -100,14 +82,9 @@ const TaskList = () => {
   const handleDeleteTask = async (taskId) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
       try {
-        const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (response.ok) {
-          fetchTasks();
-        }
+        const { default: api } = await import('../services/api');
+        await api.delete(`/tasks/${taskId}`);
+        fetchTasks();
       } catch (error) {
         console.error('Error deleting task:', error);
       }
@@ -122,14 +99,14 @@ const TaskList = () => {
         <main className="dashboard-content">
           <div className="task-header">
             <h2>Tasks</h2>
-            {user?.role === 'admin' && (
+            {(user?.role === 'Admin' || user?.role === 'Manager') && (
               <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
                 {showForm ? 'Cancel' : 'Create New Task'}
               </button>
             )}
           </div>
 
-          {showForm && user?.role === 'admin' && (
+          {showForm && (user?.role === 'Admin' || user?.role === 'Manager') && (
             <form onSubmit={handleCreateTask} className="task-form">
               <div className="form-group">
                 <label>Title:</label>
@@ -154,14 +131,13 @@ const TaskList = () => {
                     value={newTask.priority}
                     onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
                   >
-                    <option>low</option>
-                    <option>medium</option>
-                    <option>high</option>
-                    <option>urgent</option>
+                    <option>Low</option>
+                    <option>Medium</option>
+                    <option>High</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Deadline:</label>
+                  <label>Due Date:</label>
                   <input
                     type="date"
                     value={newTask.deadline}
@@ -199,29 +175,28 @@ const TaskList = () => {
                     <th>Title</th>
                     <th>Priority</th>
                     <th>Status</th>
-                    <th>Deadline</th>
-                    {user?.role === 'admin' && <th>Actions</th>}
+                    <th>Due Date</th>
+                    {(user?.role === 'Admin' || user?.role === 'Manager') && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {tasks.map((task) => (
                     <tr key={task.id}>
                       <td>{task.title}</td>
-                      <td><span className={`priority ${task.priority}`}>{task.priority}</span></td>
+                      <td><span className={`priority ${task.priority?.toLowerCase()}`}>{task.priority}</span></td>
                       <td>
                         <select
                           value={task.status}
                           onChange={(e) => handleUpdateStatus(task.id, e.target.value)}
                           className="status-select"
                         >
-                          <option value="pending">Pending</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
                         </select>
                       </td>
-                      <td>{task.deadline}</td>
-                      {user?.role === 'admin' && (
+                      <td>{task.deadline || '-'}</td>
+                      {(user?.role === 'Admin' || user?.role === 'Manager') && (
                         <td>
                           <button
                             className="btn-danger"
